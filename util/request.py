@@ -19,14 +19,17 @@ class Request:
                 status_line[2] = ""
 
             # Body
-            body  = request.decode().split('\r\n\r\n')
-            if len(body) > 1:
-                body = str.encode(body[1])
+            body  = request.split(b'\r\n\r\n')
+            if len(body) > 2:
+                body = b"\r\n\r\n".join(body[1:])
+            else:
+                body = body[1]
 
             # Headers, Cookies
             header_dict = {}
             cookie_dict = {} 
-            for x in request_list[1:]:
+            header_list = request.decode().split('\r\n\r\n')[0].split('\r\n')
+            for x in header_list[1:]:
                 header = x.split(": ")
                 if len(header) >= 2:
                     header_dict[header[0].lstrip()] = header[1].lstrip()
