@@ -1,4 +1,4 @@
-from request import Request
+# from request import Request
 
 def parse_multipart(r):
     class Part:
@@ -32,8 +32,8 @@ def parse_multipart(r):
         print(content, header_dict, name)
     return MultipartData(boundary, object_part_list)
 
-r = Request(b'POST /form-path HTTP/1.1/\r\nContent-Length: 9937\r\nContent-Type: multipart/form-data; boundary=----WebKitFormBoundarycriD3u6M0UuPR1ia\r\n\r\n------WebKitFormBoundarycriD3u6M0UuPR1ia\r\nContent-Disposition: form-data; name="commenter"\r\n\r\nJesse\r\n------WebKitFormBoundarycriD3u6M0UuPR1ia\r\nContent-Disposition: form-data; name="upload"; filename="discord.png"\r\nContent-Type: image/png\r\n\r\n<bytes_of_the_file>\r\n------WebKitFormBoundarycriD3u6M0UuPR1ia--')
-multipart_test1 = parse_multipart(r)
+# r = Request(b'POST /form-path HTTP/1.1/\r\nContent-Length: 9937\r\nContent-Type: multipart/form-data; boundary=----WebKitFormBoundarycriD3u6M0UuPR1ia\r\n\r\n------WebKitFormBoundarycriD3u6M0UuPR1ia\r\nContent-Disposition: form-data; name="commenter"\r\n\r\nJesse\r\n------WebKitFormBoundarycriD3u6M0UuPR1ia\r\nContent-Disposition: form-data; name="upload"; filename="discord.png"\r\nContent-Type: image/png\r\n\r\n<bytes_of_the_file>\r\n------WebKitFormBoundarycriD3u6M0UuPR1ia--')
+# multipart_test1 = parse_multipart(r)
 # print(multipart_test1.boundary)
 # print("--------------")
 # print(type(multipart_test1.parts[0].content))
