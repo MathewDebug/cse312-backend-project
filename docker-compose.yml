@@ -1,0 +1,13 @@
+version: "3"
+services:
+  mongo:
+    image: mongo:4.2.5
+  app:
+    build: .
+    environment:
+      SPOTIFY_CLIENT_ID: "changeMe"
+      SPOTIFY_CLIENT_SECRET: "changeMe"
+      SPOTIFY_REDIRECT_URI: "http://localhost:8080/spotify"
+      WAIT_HOSTS: mongo:27017
+    ports:
+      - '8080:8080'

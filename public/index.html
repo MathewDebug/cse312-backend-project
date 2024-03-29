@@ -1,0 +1,113 @@
+<html lang="en">
+<head>
+    <title>CSE312 Homework App</title>
+    <link rel="stylesheet" type="text/css" href="/public/style.css"/>
+    <link rel="shortcut icon" type="image/x-icon" href="/public/favicon.ico">
+</head>
+
+<body onload="welcome();">
+
+<div class="title">
+    <h2>CSE312 App</h2>
+</div>
+
+<div class="header">
+    <div class="image_div">
+        <img src="/public/image/eagle.jpg" alt="It's an eagle" class="my_image"/>
+    </div>
+    <div class="welcome-div">
+        <p id="paragraph">
+            Welcome to CSE312 Social. You're one stop for chat, image uploads, and video calls 🙂.
+            You've been here {{visits}} times.
+        </p>
+    </div>
+</div>
+
+
+<div class="contents">
+
+    <div class="chat">
+
+
+        <div id="chat-messages">
+        </div>
+
+
+        <div class="chat-form">
+            <form action="/chat-messages" method="post" enctype="application/x-www-form-urlencoded">
+                <input id="xsrf_token" type="hidden" name="xsrf_token" value="{{xsrf_token}}">
+            </form>
+
+            <hr>
+            <label>
+                Chat:
+                <input id="chat-text-box" type="text">
+            </label>
+            <button id="chat-button" onclick="sendChat()">Send</button>
+        </div>
+
+    </div>
+
+    <div class="video-chat">
+        <video class="webrtc-video" id="myVideo" autoplay muted></video>
+        <br/>
+        <video class="webrtc-video" id="otherVideo" autoplay></video>
+
+        <br/>
+        <button onclick="startVideo()">Start My Video</button>
+        <br/>
+        <button onclick="connectWebRTC()">Start Video Chat</button>
+        <br/>
+    </div>
+
+
+    <div class="user-list">
+
+
+        Register:
+        <form action="/register" method="post" enctype="application/x-www-form-urlencoded">
+            <label>Username:
+                <input id="reg-form-username" type="text" name="username_reg"/>
+            </label>
+            <br/>
+            <label>Password:&nbsp;
+                <input id="reg-form-pass" type="password" name="password_reg">
+            </label>
+            <input type="submit" value="Post">
+        </form>
+
+        Login:
+        <form action="/login" method="post" enctype="application/x-www-form-urlencoded">
+            <label>Username:
+                <input id="login-form-username" type="text" name="username_login"/>
+            </label>
+            <br/>
+            <label>Password:&nbsp;
+                <input id="login-form-pass" type="password" name="password_login">
+            </label>
+            <input type="submit" value="Post">
+        </form>
+        <form action="/login-spotify" method="post" enctype="application/x-www-form-urlencoded">
+            <input type="submit" value="Login with Spotify">
+        </form>
+        <form action="/logout" method="post" enctype="application/x-www-form-urlencoded">
+            <input type="submit" value="Logout">
+        </form>
+
+        <form action="/profile-pic" id="image-form" method="post" enctype="multipart/form-data">
+            <br/>
+            <label for="form-file">Change profile picture: </label>
+            <input id="form-file" type="file" name="upload">
+            <br/>
+            <input type="submit" value="Post">
+        </form>
+
+
+    </div>
+</div>
+
+
+<script src="/public/functions.js"></script>
+<script src="/public/webrtc.js"></script>
+</body>
+</html>
