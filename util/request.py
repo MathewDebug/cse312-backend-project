@@ -9,10 +9,10 @@ class Request:
             self.headers = {}
             self.cookies = {}
         else:
-            request_list = request.decode().split('\r\n')
+            request_list = request.split(b'\r\n')
 
             # Method, Path, HTTP Version
-            status_line = request_list[0].split(' ')
+            status_line = request_list[0].decode().split(' ')
             if len(status_line) < 3:
                 status_line[0] = ""
                 status_line[1] = ""
@@ -27,8 +27,10 @@ class Request:
 
             # Headers, Cookies
             header_dict = {}
-            cookie_dict = {} 
-            header_list = request.decode().split('\r\n\r\n')[0].split('\r\n')
+            cookie_dict = {}
+            header_list = request.split(b'\r\n\r\n')[0]
+        
+            header_list = header_list.decode().split('\r\n')
             for x in header_list[1:]:
                 header = x.split(": ")
                 if len(header) >= 2:
