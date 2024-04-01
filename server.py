@@ -1,20 +1,23 @@
 import socketserver
 
+from db import user_collection
 from util.request import Request
 from util.auth import get_user_id, get_user_data
 
 from functions.chat import deleteMessageFunction, retrieveMessageFunction, getChatMessagesFunction, sendChatMessagesFunction, updateMessageFunction
+from functions.multipart_uploads import imageUploadFunction, movieUploadFunction
 from functions.auth import loginFunction, logoutFunction, registerFunction
 from functions.spotify import loginSpotifyFunction, spotifyCallbackFunction
+
 class MyTCPHandler(socketserver.BaseRequestHandler):
 
     def handle(self):
         received_data = self.request.recv(2048)
-        if not received_data.decode('utf-8').startswith('GET /chat-messages'):
-            print(self.client_address)
-            print("--- received data ---")
-            print(received_data)
-            print("--- end of data ---\n\n")
+        # if not received_data.startswith(b'GET /chat-messages'):
+        #     print(self.client_address)
+        #     print("--- received data ---")
+        #     print(received_data)
+        #     print("--- end of data ---\n\n")
 
         request = Request(received_data)
         path = request.path
@@ -58,6 +61,16 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
             self.loginSpotify(request)
         elif path.startswith('/spotify') and method == "GET":
             self.spotifyCallback(request)
+        elif path == '/upload-image' and method == "POST":
+            content_length = request.headers.get('Content-Length')
+            if content_length != None:
+                body = len(received_data)
+                while body < int(content_length):
+                    print(body, content_length)
+                    more_data = self.request.recv(2048)
+                    received_data += more_data
+                    body += len(more_data)
+            self.imageUpload(Request(received_data))
         else:
             self.request.sendall("HTTP/1.1 404 Not Found\r\nContent-Type: text/plain\r\nX-Content-Type-Options: nosniff\r\n\r\nContent not found".encode())
 
@@ -97,11 +110,15 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
     def sendChatMessages(self, request):
         self.request.sendall(sendChatMessagesFunction(request))
         
+    def imageUpload(self, request):
+        self.request.sendall(imageUploadFunction(request))
+
+    def movieUpload(self, request):
+        self.request.sendall(movieUploadFunction(request))
     # Other ------------------------------------------------------------
     def sendResponse(self, file_path, mime_type, request):
         if mime_type == 'text/html':
             # pull from databse 
-            
             if request.cookies.get('visits') == None:
                 visits = 1
             else:
@@ -111,11 +128,13 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
                 with open(file_path, 'rb') as file:
                     content = file.read()
                     content = content.decode().replace('{{visits}}', str(visits)).encode()
-                    if get_user_id(request) != None:
+                    if get_user_data(request) != None:
                         xsrf_token = get_user_data(request)['xsrf_token']
                         content = content.decode().replace('{{xsrf_token}}', xsrf_token).encode()
+                    
                     response = f"HTTP/1.1 200 OK\r\nContent-Length: {len(content)}\r\nContent-Type: {mime_type}; charset=UTF-8\r\nSet-Cookie: visits={visits}; Max-Age=3600;\r\nX-Content-Type-Options: nosniff\r\n\r\n".encode() + content
             except Exception:
+                print("error 1")
                 response = f"HTTP/1.1 404 Not Found\r\nContent-Type: text/plain\r\nX-Content-Type-Options: nosniff\r\n\r\nContent not found".encode()
         elif mime_type == 'text/css' or mime_type == 'image/jpg' or mime_type == 'image/ico' or mime_type == "text/javascript":
             try:

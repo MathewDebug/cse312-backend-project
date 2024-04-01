@@ -53,7 +53,9 @@ def validate_password(password):
 
 # Helper Functions
 def get_user_data(request):
-    token_hash = request.cookies['id']
+    token_hash = request.cookies.get('id')
+    if token_hash == None:
+        return None
     return user_collection.find_one({"auth_token": token_hash})
     
 def get_user_id(request):
