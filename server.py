@@ -33,7 +33,7 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
             mime_type = "text/plain"
             if file_type == "html" or file_type == "css":
                 mime_type = "text/" + file_type
-            elif file_type == "jpg" or file_type == "ico":
+            elif file_type == "jpg" or file_type == "png" or file_type == "gif" or file_type == "ico":
                 mime_type = "image/" + file_type
             elif file_type == "mp4":
                 mime_type = "video/mp4"
@@ -41,7 +41,6 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
                 mime_type = "text/javascript"
 
             file_path = path.lstrip("/")
-
             self.sendResponse(file_path, mime_type, request)
         elif path == "/chat-messages" and method == "GET":
             self.getChatMessages()
@@ -134,7 +133,7 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
                     response = f"HTTP/1.1 200 OK\r\nContent-Length: {len(content)}\r\nContent-Type: {mime_type}; charset=UTF-8\r\nSet-Cookie: visits={visits}; Max-Age=3600;\r\nX-Content-Type-Options: nosniff\r\n\r\n".encode() + content
             except Exception:
                 response = f"HTTP/1.1 404 Not Found\r\nContent-Type: text/plain\r\nX-Content-Type-Options: nosniff\r\n\r\nContent not found".encode()
-        elif mime_type == 'text/css' or mime_type == 'image/jpg' or mime_type == 'image/ico' or mime_type == "text/javascript":
+        elif mime_type == 'text/css' or mime_type == 'image/jpg' or mime_type == 'image/ico' or mime_type == 'image/png' or mime_type == 'image/gif' or mime_type == 'video/mp4'or mime_type == "text/javascript":
             try:
                 with open(file_path, 'rb') as file:
                     content = file.read()
