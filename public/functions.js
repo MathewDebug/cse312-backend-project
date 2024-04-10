@@ -1,4 +1,4 @@
-const ws = false;
+const ws = true;
 let socket = null;
 
 function initWS() {

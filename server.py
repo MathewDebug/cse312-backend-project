@@ -1,23 +1,29 @@
 import socketserver
 
-from db import user_collection
+from db import user_collection, messages_collection
 from util.request import Request
 from util.auth import get_user_id, get_user_data
+from threading import Thread
+import json
+from html import escape
 
 from functions.chat import deleteMessageFunction, retrieveMessageFunction, getChatMessagesFunction, sendChatMessagesFunction, updateMessageFunction
 from functions.multipart_uploads import fileUploadFunction
 from functions.auth import loginFunction, logoutFunction, registerFunction
 from functions.spotify import loginSpotifyFunction, spotifyCallbackFunction
+from functions.websockets import websocketHandshakeFunction
+from util.websockets import parse_ws_frame, generate_ws_frame
 
 class MyTCPHandler(socketserver.BaseRequestHandler):
-
+    websocket_connections = []
     def handle(self):
+
         received_data = self.request.recv(2048)
-        # if not received_data.startswith(b'GET /chat-messages'):
-        #     print(self.client_address)
-        #     print("--- received data ---")
-        #     print(received_data)
-        #     print("--- end of data ---\n\n")
+        if not received_data.startswith(b'GET /chat-messages'):
+            print(self.client_address)
+            print("--- received data ---")
+            print(received_data)
+            print("--- end of data ---\n\n")
 
         request = Request(received_data)
         path = request.path
@@ -71,11 +77,63 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
                     received_data += more_data
                     body += len(more_data)
             self.fileUpload(Request(received_data))
+        elif path == "/websocket" and method == "GET":
+            username = self.websocketHandshake(request)
+            MyTCPHandler.websocket_connections.append(self)
+            self.handle_websocket_chat(request, username, received_data) 
         else:
             self.request.sendall("HTTP/1.1 404 Not Found\r\nContent-Type: text/plain\r\nX-Content-Type-Options: nosniff\r\n\r\nContent not found".encode())
 
-    # CHANGE DOCKER-COMPOSE YML FILE WITH SPOTIFY, CHANGE SPOTIFY CLIENT_ID, REDIRECT_ID, CHANGE DATABASE MONGODB
+
+    def handle_websocket_chat(self, request, username, received_data):
+        while True:
+            print("WEBSOCKET LOOP TOP")
+            websocket_received_data = self.request.recv(2048)
+
+            ws_frame = parse_ws_frame(websocket_received_data)
             
+            body = len(received_data)
+            print("ws_frame finbit, opcode, payload length, payload: ", ws_frame.fin_bit, ws_frame.opcode, ws_frame.payload_length, ws_frame.payload)
+
+            fin_bit, opcode, payload_length, payload = ws_frame.fin_bit, ws_frame.opcode, ws_frame.payload_length, ws_frame.payload
+            if opcode == 1:
+                payload = json.loads(payload.decode("utf-8"))
+                message_type, message = payload["messageType"], escape(payload["message"])
+                # Broadcast to all
+                if message_type == "chatMessage":
+                    # Add to database   
+                    db_payload = {
+                        'username': username,
+                        'message': message
+                    }
+                    message_data = messages_collection.insert_one(db_payload)
+                    message_id = message_data.inserted_id 
+                    # Socket stuff
+                    socket_payload = {
+                        'messageType': 'chatMessage', 
+                        'username': username, 
+                        'message': message, 
+                        'id': str(message_id)
+                    }
+                    socket_payload = json.dumps(socket_payload)
+                    socket_payload = socket_payload.encode()
+                    for client in MyTCPHandler.websocket_connections: 
+                        client.request.sendall(generate_ws_frame(socket_payload))
+                else:
+                    print("Not chatMessage Type: ", message_type, message)
+
+            elif opcode == 8:
+                MyTCPHandler.websocket_connections.remove(self)
+                self.request.close()
+            elif opcode == 0:
+                print("0000 opcode don't what to do with this")
+
+
+    # Web Sockets ------------------------------------------------------------
+    def websocketHandshake(self, request):
+        response, username = websocketHandshakeFunction(request)
+        self.request.sendall(response)
+        return username
 
     # Auth ------------------------------------------------------------
     def logout(self, request):
@@ -150,7 +208,7 @@ def main():
 
     socketserver.TCPServer.allow_reuse_address = True
 
-    server = socketserver.TCPServer((host, port), MyTCPHandler)
+    server = socketserver.ThreadingTCPServer((host, port), MyTCPHandler)
 
     print("Listening on port " + str(port))
 

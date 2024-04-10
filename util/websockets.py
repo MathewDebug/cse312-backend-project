@@ -2,7 +2,6 @@ import hashlib
 import base64
 
 def compute_accept(ws_key):
-    # GUID from slide 7?
     return base64.b64encode(hashlib.sha1((ws_key + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11").encode()).digest()).decode()
 
 
@@ -32,7 +31,6 @@ def parse_ws_frame(ws_frame_bytes):
     elif payload_length == 127:
         payload_start = 10
         payload_length = int.from_bytes(ws_frame_bytes[2:10], byteorder='big')
-
     if mask_bit == 0x01:
         mask = ws_frame_bytes[payload_start:payload_start + 4]
         payload_start += 4
@@ -47,7 +45,7 @@ def parse_ws_frame(ws_frame_bytes):
 
 
 def generate_ws_frame(payload_bytes):
-    fin_bit, opcode = 0x80, 0x0001 
+    fin_bit, opcode = 0x80, 0x0001
     fin_opcode = fin_bit | opcode
     frame = bytearray([fin_opcode])
     
@@ -55,10 +53,10 @@ def generate_ws_frame(payload_bytes):
         frame.append(len(payload_bytes))
     elif len(payload_bytes) < 65536:
         frame.append(126)
-        frame.extend(len(payload_bytes).to_bytes(2))
+        frame.extend(len(payload_bytes).to_bytes(2, byteorder='big'))
     else:
         frame.append(127)
-        frame.extend(len(payload_bytes).to_bytes(8))
+        frame.extend(len(payload_bytes).to_bytes(8, byteorder='big'))
 
     frame.extend(payload_bytes)
     return bytes(frame)

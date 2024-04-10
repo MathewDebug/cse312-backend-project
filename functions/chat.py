@@ -23,8 +23,7 @@ def sendChatMessagesFunction(request):
     message = json.loads(request.body.decode('utf-8'))['message']
     message = escape(message)
     payload = {}
-    
-    if request.cookies.get('id') == None:
+    if get_user_data(request) == None:
         payload = {
             'username': 'Guest',
             'message': message

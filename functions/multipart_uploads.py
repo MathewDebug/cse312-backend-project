@@ -29,7 +29,7 @@ def fileUploadFunction(request):
                 user_data = get_user_data(request)
                 payload = {
                     'username': user_data['username'],
-                    'message': f"<video controls><source ssrc='/public/image/{filename}' type='video/mp4'></video>",
+                    'message': f"<video controls><source src='/public/image/{filename}' type='video/mp4'></video>",
                 }
                 messages_collection.insert_one(payload)  
         # JPG
