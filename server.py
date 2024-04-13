@@ -90,21 +90,17 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
     def handle_websocket_chat(self, request, username, received_data):
         while True:
             websocket_received_data = self.request.recv(2048)
+            if not websocket_received_data:
+                break
 
-            first_byte = websocket_received_data[0]
-            second_byte = websocket_received_data[1]
-
-            fin_bit_before = (first_byte >> 7) & 0x01
-            payload_length_before = second_byte & 0x7F
+            payload_length_before = websocket_received_data[1] & 0x7F
 
             if payload_length_before == 126:
                 payload_length_before = int.from_bytes(websocket_received_data[2:4], byteorder='big')
             elif payload_length_before == 127:
                 payload_length_before = int.from_bytes(websocket_received_data[2:10], byteorder='big')
             body = len(websocket_received_data)
-
             while body < int(payload_length_before):
-                print(payload_length_before, len(websocket_received_data))
                 more_data = self.request.recv(2048)
                 websocket_received_data += more_data
                 body += len(more_data)
@@ -112,6 +108,7 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
             #FINBIT IS FOR SENDING MESSAGES FAST!!!!!!!!
             ws_frame = parse_ws_frame(websocket_received_data)
             print("ws_frame finbit, opcode, payload length, payload: ", ws_frame.fin_bit, ws_frame.opcode, ws_frame.payload_length, ws_frame.payload)
+            # print("ws_frame finbit, opcode, payload length: ", ws_frame.fin_bit, ws_frame.opcode, ws_frame.payload_length)
 
             fin_bit, opcode, payload_length, payload = ws_frame.fin_bit, ws_frame.opcode, ws_frame.payload_length, ws_frame.payload
             if opcode == 1:
@@ -137,8 +134,21 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
                     socket_payload = socket_payload.encode()
                     for client in MyTCPHandler.websocket_connections: 
                         client.request.sendall(generate_ws_frame(socket_payload))
+                elif message_type == "liveUserList":
+                    if message == "open":
+                        socket_payload = {
+                            'messageType': 'liveUserList', 
+                            'username': username, 
+                            'message': message, 
+                        }
+                        print("ws_frame: ", generate_ws_frame(socket_payload))
+                        # for client in MyTCPHandler.websocket_connections: 
+                        #     client.request.sendall()
+                        print("open")
+                    else:
+                        print("close")
                 else:
-                    print("Not chatMessage Type: ", message_type, message)
+                    print("Not Known Type right now", message_type, message)
 
             elif opcode == 8:
                 MyTCPHandler.websocket_connections.remove(self)
@@ -191,34 +201,7 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
 
     # Other ------------------------------------------------------------
     def sendResponse(self, file_path, mime_type, request):
-        if mime_type == 'text/html':
-            # pull from databse 
-            if request.cookies.get('visits') == None:
-                visits = 1
-            else:
-                visits = int(request.cookies['visits']) + 1
-
-            try:
-                with open(file_path, 'rb') as file:
-                    content = file.read()
-                    content = content.decode().replace('{{visits}}', str(visits)).encode()
-                    if get_user_data(request) != None:
-                        xsrf_token = get_user_data(request)['xsrf_token']
-                        content = content.decode().replace('{{xsrf_token}}', xsrf_token).encode()
-                    
-                    response = f"HTTP/1.1 200 OK\r\nContent-Length: {len(content)}\r\nContent-Type: {mime_type}; charset=UTF-8\r\nSet-Cookie: visits={visits}; Max-Age=3600;\r\nX-Content-Type-Options: nosniff\r\n\r\n".encode() + content
-            except Exception:
-                response = f"HTTP/1.1 404 Not Found\r\nContent-Type: text/plain\r\nX-Content-Type-Options: nosniff\r\n\r\nContent not found".encode()
-        elif mime_type == 'text/css' or mime_type == 'image/jpg' or mime_type == 'image/ico' or mime_type == 'image/png' or mime_type == 'image/gif' or mime_type == 'video/mp4'or mime_type == "text/javascript":
-            try:
-                with open(file_path, 'rb') as file:
-                    content = file.read()
-                    response = f"HTTP/1.1 200 OK\r\nContent-Length: {len(content)}\r\nContent-Type: {mime_type}\r\nX-Content-Type-Options: nosniff\r\n\r\n".encode() + content
-            except Exception:
-                response = f"HTTP/1.1 404 Not Found\r\nContent-Type: text/plain\r\nX-Content-Type-Options: nosniff\r\n\r\nContent not found".encode()
-        else: 
-            response = "HTTP/1.1 404 Not Found\r\nContent-Type: text/plain\r\nX-Content-Type-Options: nosniff\r\n\r\nContent not found".encode()
-        self.request.sendall(response)
+        self.request.sendall(sendResponseFunction(file_path, mime_type, request))
 
 def main():
     host = "0.0.0.0"

@@ -125,3 +125,17 @@ function welcome() {
   // use this line to start your video without having to click a button. Helpful for debugging
   // startVideo();
 }
+
+function liveuserlist(type) {
+  console.log("javascript websocket liveuserlist");
+  const liveuserList = document.getElementById("userList");
+  if (type == "login") {
+    socket.send(
+      JSON.stringify({ messageType: "liveUserList", message: "open" })
+    );
+  } else {
+    socket.send(
+      JSON.stringify({ messageType: "liveUserList", message: "close" })
+    );
+  }
+}

@@ -1,7 +1,7 @@
 from util.auth import get_user_data
 
 
-def sendResponseFunction(self, file_path, mime_type, request):
+def sendResponseFunction(file_path, mime_type, request):
     if mime_type == 'text/html':
         # pull from databse 
         if request.cookies.get('visits') == None:
