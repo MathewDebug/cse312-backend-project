@@ -1,8 +1,6 @@
 import socketserver
 
 from db import user_collection, messages_collection
-from util.request import Request
-from util.auth import get_user_id, get_user_data
 from threading import Thread
 import json
 from html import escape
@@ -12,7 +10,11 @@ from functions.multipart_uploads import fileUploadFunction
 from functions.auth import loginFunction, logoutFunction, registerFunction
 from functions.spotify import loginSpotifyFunction, spotifyCallbackFunction
 from functions.websockets import websocketHandshakeFunction
+from functions.other import sendResponseFunction
+
 from util.websockets import parse_ws_frame, generate_ws_frame
+from util.auth import get_user_id, get_user_data
+from util.request import Request
 
 class MyTCPHandler(socketserver.BaseRequestHandler):
     websocket_connections = []
@@ -87,12 +89,28 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
 
     def handle_websocket_chat(self, request, username, received_data):
         while True:
-            print("WEBSOCKET LOOP TOP")
             websocket_received_data = self.request.recv(2048)
 
+            first_byte = websocket_received_data[0]
+            second_byte = websocket_received_data[1]
+
+            fin_bit_before = (first_byte >> 7) & 0x01
+            payload_length_before = second_byte & 0x7F
+
+            if payload_length_before == 126:
+                payload_length_before = int.from_bytes(websocket_received_data[2:4], byteorder='big')
+            elif payload_length_before == 127:
+                payload_length_before = int.from_bytes(websocket_received_data[2:10], byteorder='big')
+            body = len(websocket_received_data)
+
+            while body < int(payload_length_before):
+                print(payload_length_before, len(websocket_received_data))
+                more_data = self.request.recv(2048)
+                websocket_received_data += more_data
+                body += len(more_data)
+
+            #FINBIT IS FOR SENDING MESSAGES FAST!!!!!!!!
             ws_frame = parse_ws_frame(websocket_received_data)
-            
-            body = len(received_data)
             print("ws_frame finbit, opcode, payload length, payload: ", ws_frame.fin_bit, ws_frame.opcode, ws_frame.payload_length, ws_frame.payload)
 
             fin_bit, opcode, payload_length, payload = ws_frame.fin_bit, ws_frame.opcode, ws_frame.payload_length, ws_frame.payload

@@ -31,6 +31,7 @@ def parse_ws_frame(ws_frame_bytes):
     elif payload_length == 127:
         payload_start = 10
         payload_length = int.from_bytes(ws_frame_bytes[2:10], byteorder='big')
+        
     if mask_bit == 0x01:
         mask = ws_frame_bytes[payload_start:payload_start + 4]
         payload_start += 4
