@@ -18,6 +18,8 @@ from util.request import Request
 
 class MyTCPHandler(socketserver.BaseRequestHandler):
     websocket_connections = []
+    live_user_list = ["TEst"]
+
     def handle(self):
 
         received_data = self.request.recv(2048)
@@ -63,6 +65,7 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
         elif path == '/register' and method == "POST":
             self.register(request)
         elif path == '/login' and method == "POST":
+            print("LOGIN HTTP!!!!!!!!!!!!")
             self.login(request)
         elif path == "/logout" and method == "POST":
             self.logout(request)
@@ -80,9 +83,15 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
                     body += len(more_data)
             self.fileUpload(Request(received_data))
         elif path == "/websocket" and method == "GET":
+            print("WEBSOCKET!!!!")
             username = self.websocketHandshake(request)
             MyTCPHandler.websocket_connections.append(self)
             self.handle_websocket_chat(request, username, received_data) 
+        elif path == "/live-users" and method == "GET":
+            content = MyTCPHandler.live_user_list
+            content = ', '.join(content)
+            print("GET LIVE USERS: ", content)
+            self.request.sendall(f"HTTP/1.1 200 OK\r\nContent-Length: {len(content)}\r\nContent-Type: text/plain\r\nX-Content-Type-Options: nosniff\r\n\r\n".encode() + content.encode('utf-8'))
         else:
             self.request.sendall("HTTP/1.1 404 Not Found\r\nContent-Type: text/plain\r\nX-Content-Type-Options: nosniff\r\n\r\nContent not found".encode())
 
@@ -92,8 +101,10 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
             websocket_received_data = self.request.recv(2048)
             if not websocket_received_data:
                 break
-
+            
+            # Buffering
             payload_length_before = websocket_received_data[1] & 0x7F
+            finbit_before = (websocket_received_data[0] >> 7) & 0x01
 
             if payload_length_before == 126:
                 payload_length_before = int.from_bytes(websocket_received_data[2:4], byteorder='big')
@@ -135,24 +146,37 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
                     for client in MyTCPHandler.websocket_connections: 
                         client.request.sendall(generate_ws_frame(socket_payload))
                 elif message_type == "liveUserList":
+                    print("ADDED USER TO LIVEUSERLIST!!", username)
                     if message == "open":
+                        MyTCPHandler.live_user_list.append(username)
                         socket_payload = {
                             'messageType': 'liveUserList', 
-                            'username': username, 
-                            'message': message, 
+                            'message': MyTCPHandler.live_user_list, 
                         }
-                        print("ws_frame: ", generate_ws_frame(socket_payload))
-                        # for client in MyTCPHandler.websocket_connections: 
-                        #     client.request.sendall()
-                        print("open")
+                        socket_payload = json.dumps(socket_payload)
+                        socket_payload = socket_payload.encode()
+
+                        for client in MyTCPHandler.websocket_connections: 
+                            client.request.sendall(generate_ws_frame(socket_payload))
                     else:
-                        print("close")
+                        print("REMOVED USER FROM LIVEUSERLIST!!", username)
+                        MyTCPHandler.live_user_list.remove(username)
+                        socket_payload = {
+                            'messageType': 'liveUserList', 
+                            'message': MyTCPHandler.live_user_list, 
+                        }
+                        socket_payload = json.dumps(socket_payload)
+                        socket_payload = socket_payload.encode()
+                        
+                        for client in MyTCPHandler.websocket_connections: 
+                            client.request.sendall(generate_ws_frame(socket_payload))
                 else:
                     print("Not Known Type right now", message_type, message)
 
             elif opcode == 8:
                 MyTCPHandler.websocket_connections.remove(self)
                 self.request.close()
+                break
             elif opcode == 0:
                 print("0000 opcode don't what to do with this")
 

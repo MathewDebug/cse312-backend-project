@@ -9,8 +9,12 @@ function initWS() {
   socket.onmessage = function (ws_message) {
     const message = JSON.parse(ws_message.data);
     const messageType = message.messageType;
+    console.log("message, messageType: ", message);
     if (messageType === "chatMessage") {
       addMessageToChat(message);
+    } else if (messageType === "liveUserList") {
+      const userList = document.getElementById("userList");
+      userList.innerHTML = message.message;
     } else {
       // send message to WebRTC
       processMessageAsWebRTC(message, messageType);
@@ -113,6 +117,7 @@ function welcome() {
   document.getElementById("chat-text-box").focus();
 
   updateChat();
+  updateLiveUserList();
 
   if (ws) {
     initWS();
@@ -127,15 +132,28 @@ function welcome() {
 }
 
 function liveuserlist(type) {
-  console.log("javascript websocket liveuserlist");
-  const liveuserList = document.getElementById("userList");
+  console.log("sending socket");
   if (type == "login") {
     socket.send(
       JSON.stringify({ messageType: "liveUserList", message: "open" })
     );
-  } else {
+  } else if (type == "logout") {
     socket.send(
       JSON.stringify({ messageType: "liveUserList", message: "close" })
     );
   }
+}
+
+function updateLiveUserList() {
+  const request = new XMLHttpRequest();
+  request.onreadystatechange = function () {
+    if (this.readyState === 4 && this.status === 200) {
+      console.log(this.response);
+
+      const liveUserList = document.getElementById("userList");
+      liveUserList.innerHTML += this.response;
+    }
+  };
+  request.open("GET", "/live-users");
+  request.send();
 }
