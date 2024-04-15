@@ -68,7 +68,7 @@
 
 
     <div class="user-list">
-        <ul id="userList"></ul>
+        <div id="live-user-list"></div>
         Register:
         <form action="/register" method="post" enctype="application/x-www-form-urlencoded">
             <label>Username:
@@ -90,13 +90,13 @@
             <label>Password:&nbsp;
                 <input id="login-form-pass" type="password" name="password_login">
             </label>
-            <input type="submit" value="Post" onclick="liveuserlist('login')">
+            <input type="submit" value="Post">
         </form>
         <form action="/login-spotify" method="post" enctype="application/x-www-form-urlencoded">
             <input type="submit" value="Login with Spotify">
         </form>
         <form action="/logout" method="post" enctype="application/x-www-form-urlencoded">
-            <input type="submit" value="Logout" onclick="liveuserlist('logout')">
+            <input type="submit" value="Logout">
         </form>
 
         <form action="/profile-pic" id="image-form" method="post" enctype="multipart/form-data">

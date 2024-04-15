@@ -9,7 +9,7 @@ from functions.chat import deleteMessageFunction, retrieveMessageFunction, getCh
 from functions.multipart_uploads import fileUploadFunction
 from functions.auth import loginFunction, logoutFunction, registerFunction
 from functions.spotify import loginSpotifyFunction, spotifyCallbackFunction
-from functions.websockets import websocketHandshakeFunction
+from functions.websockets import websocketHandshakeFunction, broadcastChatFunction, broadcastLiveUserListFunction
 from functions.other import sendResponseFunction
 
 from util.websockets import parse_ws_frame, generate_ws_frame
@@ -81,19 +81,24 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
             self.fileUpload(Request(received_data))
         elif path == "/websocket" and method == "GET":
             username = self.websocketHandshake(request)
-            MyTCPHandler.websocket_connections.append(self)
+            MyTCPHandler.websocket_connections.append((self, username))
+            socket_payload = broadcastLiveUserListFunction(MyTCPHandler.websocket_connections)
+            for client in MyTCPHandler.websocket_connections: 
+                client[0].request.sendall(socket_payload)
             self.handle_websocket_chat(request, username, received_data) 
         else:
             self.request.sendall("HTTP/1.1 404 Not Found\r\nContent-Type: text/plain\r\nX-Content-Type-Options: nosniff\r\n\r\nContent not found".encode())
 
 
     def handle_websocket_chat(self, request, username, received_data):
+        message_buffer = bytearray()
         while True:
             websocket_received_data = self.request.recv(2048)
             if not websocket_received_data:
                 break
 
             payload_length_before = websocket_received_data[1] & 0x7F
+            fin_bit_before = (websocket_received_data[0] >> 7) & 0x01
 
             if payload_length_before == 126:
                 payload_length_before = int.from_bytes(websocket_received_data[2:4], byteorder='big')
@@ -101,59 +106,31 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
                 payload_length_before = int.from_bytes(websocket_received_data[2:10], byteorder='big')
             body = len(websocket_received_data)
             while body < int(payload_length_before):
+                print(body, int(payload_length_before))
                 more_data = self.request.recv(2048)
                 websocket_received_data += more_data
                 body += len(more_data)
+            
 
-            #FINBIT IS FOR SENDING MESSAGES FAST!!!!!!!!
             ws_frame = parse_ws_frame(websocket_received_data)
-            print("ws_frame finbit, opcode, payload length, payload: ", ws_frame.fin_bit, ws_frame.opcode, ws_frame.payload_length, ws_frame.payload)
+            print("ws_frame finbit, opcode, payload length, payload: ", ws_frame.fin_bit, ws_frame.opcode, ws_frame.payload_length)
             # print("ws_frame finbit, opcode, payload length: ", ws_frame.fin_bit, ws_frame.opcode, ws_frame.payload_length)
 
-            fin_bit, opcode, payload_length, payload = ws_frame.fin_bit, ws_frame.opcode, ws_frame.payload_length, ws_frame.payload
+            fin_bit, opcode, payload = ws_frame.fin_bit, ws_frame.opcode, ws_frame.payload
             if opcode == 1:
                 payload = json.loads(payload.decode("utf-8"))
                 message_type, message = payload["messageType"], escape(payload["message"])
-                # Broadcast to all
                 if message_type == "chatMessage":
-                    # Add to database   
-                    db_payload = {
-                        'username': username,
-                        'message': message
-                    }
-                    message_data = messages_collection.insert_one(db_payload)
-                    message_id = message_data.inserted_id 
-                    # Socket stuff
-                    socket_payload = {
-                        'messageType': 'chatMessage', 
-                        'username': username, 
-                        'message': message, 
-                        'id': str(message_id)
-                    }
-                    socket_payload = json.dumps(socket_payload)
-                    socket_payload = socket_payload.encode()
+                    socket_payload = broadcastChatFunction(message, username)
                     for client in MyTCPHandler.websocket_connections: 
-                        client.request.sendall(generate_ws_frame(socket_payload))
-                elif message_type == "liveUserList":
-                    if message == "open":
-                        socket_payload = {
-                            'messageType': 'liveUserList', 
-                            'username': username, 
-                            'message': message, 
-                        }
-                        print("ws_frame: ", generate_ws_frame(socket_payload))
-                        # for client in MyTCPHandler.websocket_connections: 
-                        #     client.request.sendall()
-                        print("open")
-                    else:
-                        print("close")
+                        client[0].request.sendall(socket_payload)
                 else:
                     print("Not Known Type right now", message_type, message)
-
             elif opcode == 8:
-                MyTCPHandler.websocket_connections.remove(self)
+                MyTCPHandler.websocket_connections.remove((self, username))
                 self.request.close()
             elif opcode == 0:
+                message_buffer.extend(payload)
                 print("0000 opcode don't what to do with this")
 
 

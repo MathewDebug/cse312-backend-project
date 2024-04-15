@@ -11,6 +11,8 @@ function initWS() {
     const messageType = message.messageType;
     if (messageType === "chatMessage") {
       addMessageToChat(message);
+    } else if (messageType === "updateUserList") {
+      updateUserList(message);
     } else {
       // send message to WebRTC
       processMessageAsWebRTC(message, messageType);
@@ -126,16 +128,15 @@ function welcome() {
   // startVideo();
 }
 
-function liveuserlist(type) {
-  console.log("javascript websocket liveuserlist");
-  const liveuserList = document.getElementById("userList");
-  if (type == "login") {
-    socket.send(
-      JSON.stringify({ messageType: "liveUserList", message: "open" })
-    );
-  } else {
-    socket.send(
-      JSON.stringify({ messageType: "liveUserList", message: "close" })
-    );
-  }
+function updateUserList(message) {
+  users = message.users;
+  const liveUserListElement = document.getElementById("live-user-list");
+  liveUserListElement.innerHTML = "";
+  users.forEach((user) => {
+    if (user != "Guest") {
+      const span = document.createElement("span");
+      span.textContent = user + ", ";
+      liveUserListElement.appendChild(span);
+    }
+  });
 }
