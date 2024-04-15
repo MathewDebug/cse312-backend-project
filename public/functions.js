@@ -135,7 +135,7 @@ function updateUserList(message) {
   users.forEach((user) => {
     if (user != "Guest") {
       const span = document.createElement("span");
-      span.textContent = user + ", ";
+      span.textContent = user + " ";
       liveUserListElement.appendChild(span);
     }
   });
