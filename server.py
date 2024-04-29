@@ -79,7 +79,7 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
                     received_data += more_data
                     body += len(more_data)
             self.fileUpload(Request(received_data))
-        elif path == "/websocket" and method == "GET":
+        elif path == "/websocket":
             username = self.websocketHandshake(request)
             MyTCPHandler.websocket_connections.append((self, username))
             socket_payload = broadcastLiveUserListFunction(MyTCPHandler.websocket_connections)

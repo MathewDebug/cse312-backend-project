@@ -57,7 +57,7 @@ def spotifyCallbackFunction(request):
             else:
                 user_collection.update_one({"username": spotify_username}, {"$set": {"spotify_access_token": access_token, "xsrf_token": xsrf_token, "auth_token": auth_token_hash}})
 
-            return f"HTTP/1.1 302 Found\r\nLocation: /\r\nSet-Cookie: id={auth_token_hash};  Max-Age=3600; HttpOnly\r\nContent-Type: text/plain\r\nX-Content-Type-Options: nosniff\r\n\r\n".encode()
+            return f"HTTP/1.1 302 Found\r\nLocation: /\r\nSet-Cookie: id={auth_token_hash};  Max-Age=3600; HttpOnly; Secure\r\nContent-Type: text/plain\r\nX-Content-Type-Options: nosniff\r\n\r\n".encode()
         else:
             return f"HTTP/1.1 404 Not Found\r\nContent-Type: text/plain\r\nX-Content-Type-Options: nosniff\r\n\r\nGetting Spotify User Info Failed".encode()
     else:

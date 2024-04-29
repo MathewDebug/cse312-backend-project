@@ -13,7 +13,7 @@ def logoutFunction(request):
         {"$set": {"xsrf_token": '', "auth_token": ''}}  
     )
     auth_tokens_collection.delete_one({'auth_token': request.cookies['id']})    
-    return f"HTTP/1.1 302 Found\r\nLocation: /\r\nSet-Cookie: id=; expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly\r\nContent-Type: text/plain\r\nX-Content-Type-Options: nosniff\r\n\r\n".encode()
+    return f"HTTP/1.1 302 Found\r\nLocation: /\r\nSet-Cookie: id=; expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly; Secure\r\nContent-Type: text/plain\r\nX-Content-Type-Options: nosniff\r\n\r\n".encode()
 
 
 # Register
@@ -54,7 +54,7 @@ def loginFunction(request):
                     {"username": username}, 
                     {"$set": {"xsrf_token": new_xsrf_token, "auth_token": token_hash}}  
                 )
-                return f"HTTP/1.1 302 Found\r\nLocation: /\r\nSet-Cookie: id={token_hash};  Max-Age=3600; HttpOnly\r\nContent-Length: {len(content)}\r\nContent-Type: text/plain\r\nX-Content-Type-Options: nosniff\r\n\r\n".encode() + content.encode('utf-8')
+                return f"HTTP/1.1 302 Found\r\nLocation: /\r\nSet-Cookie: id={token_hash};  Max-Age=3600; HttpOnly; Secure\r\nContent-Length: {len(content)}\r\nContent-Type: text/plain\r\nX-Content-Type-Options: nosniff\r\n\r\n".encode() + content.encode('utf-8')
             else:
                 content = "Wrong password"
         else:
